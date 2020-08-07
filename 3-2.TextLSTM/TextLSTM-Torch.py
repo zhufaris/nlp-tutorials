@@ -17,7 +17,7 @@ n_class = len(word_dict) # number of class(=number of vocab)
 seq_data = ['make', 'need', 'coal', 'word', 'love', 'hate', 'live', 'home', 'hash', 'star']
 
 # TextLSTM Parameters
-n_step = 3
+n_step = 10
 n_hidden = 128
 
 def make_batch(seq_data):
@@ -29,25 +29,25 @@ def make_batch(seq_data):
         input_batch.append(np.eye(n_class)[input])
         target_batch.append(target)
 
-    return Variable(torch.Tensor(input_batch)), Variable(torch.LongTensor(target_batch))
+    return torch.Tensor(input_batch), torch.LongTensor(target_batch)
+
 
 class TextLSTM(nn.Module):
     def __init__(self):
         super(TextLSTM, self).__init__()
-
-        self.lstm = nn.LSTM(input_size=n_class, hidden_size=n_hidden)
-        self.W = nn.Parameter(torch.randn([n_hidden, n_class]).type(dtype))
-        self.b = nn.Parameter(torch.randn([n_class]).type(dtype))
+        self.lstm = nn.LSTM(input_size=n_class, hidden_size=n_hidden, batch_first=True)
+        self.fc = nn.Linear(in_features=n_hidden, out_features=n_class)
 
     def forward(self, X):
-        input = X.transpose(0, 1)  # X : [n_step, batch_size, n_class]
+        input = X  # X : [batch_size, time, n_class]
 
-        hidden_state = Variable(torch.zeros(1, len(X), n_hidden))   # [num_layers(=1) * num_directions(=1), batch_size, n_hidden]
-        cell_state = Variable(torch.zeros(1, len(X), n_hidden))     # [num_layers(=1) * num_directions(=1), batch_size, n_hidden]
+        hidden_state = torch.zeros(1, len(X), n_hidden)   # [num_layers(=1) * num_directions(=1), batch_size, n_hidden]
+        cell_state = torch.zeros(1, len(X), n_hidden)     # [num_layers(=1) * num_directions(=1), batch_size, n_hidden]
 
-        outputs, (_, _) = self.lstm(input, (hidden_state, cell_state))
-        outputs = outputs[-1]  # [batch_size, n_hidden]
-        model = torch.mm(outputs, self.W) + self.b  # model : [batch_size, n_class]
+        outputs, (_, _) = self.lstm(input, (hidden_state, cell_state))   # [batch_size, time, n_class]
+        outputs = outputs[:,-1]  # [batch_size, n_hidden]
+
+        model = self.fc(outputs)
         return model
 
 input_batch, target_batch = make_batch(seq_data)
@@ -57,7 +57,6 @@ model = TextLSTM()
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-output = model(input_batch)
 
 # Training
 for epoch in range(1000):

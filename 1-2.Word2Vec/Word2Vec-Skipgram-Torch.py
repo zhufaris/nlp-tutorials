@@ -35,6 +35,9 @@ def random_batch(data, size):
         random_inputs.append(np.eye(voc_size)[data[i][0]])  # target
         random_labels.append(data[i][1])  # context word
 
+    print(torch.Tensor(random_inputs).shape)
+    print(torch.Tensor(random_labels).shape)
+
     return random_inputs, random_labels
 
 # Make skip gram of one size window

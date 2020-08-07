@@ -18,7 +18,7 @@ n_class = len(word_dict) # number of Vocabulary
 # NNLM Parameter
 n_step = 2 # n-1 in paper
 n_hidden = 2 # h in paper
-m = 2 # m in paper
+m = 2 # m in paper  (embedding size)
 
 def make_batch(sentences):
     input_batch = []
@@ -46,8 +46,11 @@ class NNLM(nn.Module):
         self.b = nn.Parameter(torch.randn(n_class).type(dtype))
 
     def forward(self, X):
+        #  input X: [batch_size, n_step]
+        # calculte  (X*W + tanh(X*H + d) * U + b)
         X = self.C(X)
         X = X.view(-1, n_step * m) # [batch_size, n_step * n_class]
+        # X: [batch_size, n_step * m]
         tanh = torch.tanh(self.d + torch.mm(X, self.H)) # [batch_size, n_hidden]
         output = self.b + torch.mm(X, self.W) + torch.mm(tanh, self.U) # [batch_size, n_class]
         return output
@@ -60,6 +63,8 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 input_batch, target_batch = make_batch(sentences)
 input_batch = Variable(torch.LongTensor(input_batch))
 target_batch = Variable(torch.LongTensor(target_batch))
+
+print(input_batch.shape, target_batch.shape)
 
 # Training
 for epoch in range(5000):
